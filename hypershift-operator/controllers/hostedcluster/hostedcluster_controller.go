@@ -173,6 +173,8 @@ type HostedClusterReconciler struct {
 
 	OperatorNamespace string
 
+	HostedClusterNamespace string
+
 	overwriteReconcile   func(ctx context.Context, req ctrl.Request, log logr.Logger, hcluster *hyperv1.HostedCluster) (ctrl.Result, error)
 	now                  func() metav1.Time
 	KubevirtInfraClients kvinfra.KubevirtInfraClientMap
@@ -195,6 +197,7 @@ func (r *HostedClusterReconciler) SetupWithManager(mgr ctrl.Manager, createOrUpd
 		r.now = metav1.Now
 	}
 	r.createOrUpdate = createOrUpdateWithAnnotationFactory(createOrUpdate)
+
 	// Set up watches for resource types the controller manages. The list basically
 	// tracks types of the resources in the clusterapi, controlplaneoperator, and
 	// ignitionserver manifests packages. Since we're receiving watch events across
@@ -288,6 +291,11 @@ func (r *HostedClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	log := ctrl.LoggerFrom(ctx)
 	log.Info("reconciling")
+
+	if r.HostedClusterNamespace != "" && req.Namespace != r.HostedClusterNamespace {
+		log.Info("hostedcluster is not in target namespace, skipping reconcile", "name", req.Name, "namespace", req.Namespace, "target namespace", r.HostedClusterNamespace)
+		return ctrl.Result{}, nil
+	}
 
 	// Look up the HostedCluster instance to reconcile
 	hcluster := &hyperv1.HostedCluster{}

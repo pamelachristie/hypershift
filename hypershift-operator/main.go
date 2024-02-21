@@ -315,6 +315,8 @@ func run(ctx context.Context, opts *StartOptions, log logr.Logger) error {
 		return fmt.Errorf("could not load cert rotation scale: %w", err)
 	}
 
+	hostedClusterNamespace := os.Getenv("HOSTED_CLUSTER_NAMESPACE")
+
 	hostedClusterReconciler := &hostedcluster.HostedClusterReconciler{
 		Client:                                  mgr.GetClient(),
 		ManagementClusterCapabilities:           mgmtClusterCaps,
@@ -325,6 +327,7 @@ func run(ctx context.Context, opts *StartOptions, log logr.Logger) error {
 		ImageMetadataProvider:                   imageMetaDataProvider,
 		MetricsSet:                              metricsSet,
 		OperatorNamespace:                       opts.Namespace,
+		HostedClusterNamespace:                  hostedClusterNamespace,
 		SREConfigHash:                           sreConfigHash,
 		KubevirtInfraClients:                    kvinfra.NewKubevirtInfraClientMap(),
 		MonitoringDashboards:                    monitoringDashboards,
