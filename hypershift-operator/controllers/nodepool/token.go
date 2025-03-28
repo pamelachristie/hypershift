@@ -195,6 +195,7 @@ func setExpirationTimestampOnToken(ctx context.Context, c client.Client, tokenSe
 		tokenSecret.Annotations = map[string]string{}
 	}
 	tokenSecret.Annotations[hyperv1.IgnitionServerTokenExpirationTimestampAnnotation] = now().Add(timeUntilExpiry).Format(time.RFC3339)
+	fmt.Println(tokenSecret.Name + " Setting token expiry annotation: " + tokenSecret.Annotations[hyperv1.IgnitionServerTokenExpirationTimestampAnnotation])
 	return c.Update(ctx, tokenSecret)
 }
 

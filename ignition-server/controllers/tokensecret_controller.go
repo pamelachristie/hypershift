@@ -13,6 +13,7 @@ import (
 	hyperv1 "github.com/openshift/hypershift/api/hypershift/v1beta1"
 	"github.com/openshift/hypershift/support/util"
 	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -143,6 +144,7 @@ func processIfMatchesAnnotation(logger logr.Logger, obj client.Object) bool {
 // isTokenExpired parses an expiration annotation and compares with the current time to see if a token is expired.
 // invalid formats are considered expired
 func isTokenExpired(logrInstance logr.Logger, tokenAnnotations map[string]string) bool {
+	logrInstance.Info("Checking if token is expired")
 	if expirationTimestampRaw, ok := tokenAnnotations[hyperv1.IgnitionServerTokenExpirationTimestampAnnotation]; ok {
 		expirationTime, err := time.Parse(time.RFC3339, expirationTimestampRaw)
 		if err != nil {
@@ -150,23 +152,30 @@ func isTokenExpired(logrInstance logr.Logger, tokenAnnotations map[string]string
 			logrInstance.Info("Due to invalid expiration format: marking token as expired")
 			return true
 		}
+		logrInstance.Info("Token expired", zap.Bool("expired", time.Now().After(expirationTime)))
 		return time.Now().After(expirationTime)
 	}
+	logrInstance.Info("Token doesn't have expiration timestamp")
 	return false
 }
 
 // processExpiredToken handles clearing the cache of the expired token(s) and ensuring the token secret is removed
 // from the management cluster
 func (r *TokenSecretReconciler) processExpiredToken(ctx context.Context, tokenSecret *corev1.Secret) error {
+	fmt.Println("Processing expired token " + tokenSecret.Name)
 	if oldToken, ok := tokenSecret.Data[TokenSecretOldTokenKey]; ok {
+		fmt.Println("deleteing old token " + tokenSecret.Name)
 		r.PayloadStore.Delete(string(oldToken))
 	}
 	if currentToken, ok := tokenSecret.Data[TokenSecretTokenKey]; ok {
+		fmt.Println("deleteing current token " + tokenSecret.Name)
 		r.PayloadStore.Delete(string(currentToken))
 	}
 	if err := r.Client.Delete(ctx, tokenSecret); err != nil && !apierrors.IsNotFound(err) {
+		fmt.Println("error deleting tokenSecret " + tokenSecret.Name)
 		return err
 	}
+	fmt.Println("successfully deleted tokenSecret " + tokenSecret.Name)
 	return nil
 }
 
